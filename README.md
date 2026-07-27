@@ -1,7 +1,7 @@
 # Messistant
 
 <p align="center">
-  <img src="public/messistant.jpg" alt="Lionel Messi holding a WhatsApp logo" width="720">
+  <img src="public/messistant.jpg" alt="Lionel Messi holding a WhatsApp logo" width="600">
 </p>
 
 <p align="center">
