@@ -208,7 +208,7 @@ export async function createWebServer(
     },
   });
   await app.register(fastifyStatic, {
-    root: path.resolve(process.cwd(), "public"),
+    root: path.resolve(import.meta.dirname, "../../public"),
     prefix: "/assets/",
     decorateReply: false,
     maxAge: "1h",
