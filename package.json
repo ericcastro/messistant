@@ -10,6 +10,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "node --env-file=.env ./node_modules/tsx/dist/cli.mjs watch src/main.ts",
+    "postinstall": "node scripts/build-better-sqlite3.mjs",
     "start": "node dist/main.js",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
