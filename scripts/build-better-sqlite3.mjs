@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 
@@ -63,6 +63,19 @@ const result = spawnSync(
 if (result.error) {
   console.error(`Unable to build better-sqlite3: ${result.error.message}`);
   process.exit(1);
+}
+
+const prebuildPath = path.join(
+  packageDirectory,
+  "prebuilds",
+  "linux-x64.node",
+);
+const disabledPrebuildPath = `${prebuildPath}.glibc-incompatible`;
+
+if (result.status === 0 && existsSync(prebuildPath)) {
+  rmSync(disabledPrebuildPath, { force: true });
+  renameSync(prebuildPath, disabledPrebuildPath);
+  console.log("Using the locally compiled better-sqlite3 binary.");
 }
 
 process.exit(result.status ?? 1);
