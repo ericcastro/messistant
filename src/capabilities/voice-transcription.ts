@@ -43,6 +43,17 @@ function runtimeMessageId(message: Message): string {
   return typeof id.id === "string" ? id.id : "";
 }
 
+function transcriptionMessageId(message: Message): string {
+  const id = message.id as unknown as {
+    _serialized?: unknown;
+    id?: unknown;
+  };
+  if (typeof id._serialized === "string" && id._serialized.trim()) {
+    return id._serialized;
+  }
+  return typeof id.id === "string" ? id.id : "";
+}
+
 function quotedMessageReference(event: NormalizedMessageEvent): {
   id: string;
   raw: Record<string, unknown> | null;
@@ -257,6 +268,28 @@ export const voiceTranscriptionCapability: Capability = {
       return;
     }
 
+    const targetMessageId = transcriptionMessageId(target);
+    if (targetMessageId) {
+      const cached = context.database.getVoiceTranscription(targetMessageId);
+      if (cached) {
+        if (cached.replySent) {
+          context.logger.info(
+            { messageId: event.id, targetMessageId },
+            "Skipped duplicate voice transcription reply",
+          );
+          return;
+        }
+        await event.raw.reply(`${
+          typeof context.configuration.settings.replyPrefix === "string" &&
+          context.configuration.settings.replyPrefix.trim()
+            ? context.configuration.settings.replyPrefix.trim()
+            : "📝 Transcript:"
+        }\n${cached.transcript}`);
+        context.database.markVoiceTranscriptionReplied(targetMessageId);
+        return;
+      }
+    }
+
     const maxBytes = numberSetting(
       context.configuration.settings,
       "maxBytes",
@@ -313,7 +346,7 @@ export const voiceTranscriptionCapability: Capability = {
       mimeType,
       ...(language ? { language } : {}),
       prompt,
-      idempotencyKey: context.requestKey,
+      idempotencyKey: targetMessageId || context.requestKey,
     });
     const prefixValue = context.configuration.settings.replyPrefix;
     const prefix =
@@ -321,6 +354,12 @@ export const voiceTranscriptionCapability: Capability = {
         ? prefixValue.trim()
         : "📝 Transcript:";
 
+    if (targetMessageId) {
+      context.database.saveVoiceTranscription(targetMessageId, transcript);
+    }
     await event.raw.reply(`${prefix}\n${transcript}`);
+    if (targetMessageId) {
+      context.database.markVoiceTranscriptionReplied(targetMessageId);
+    }
   },
 };

@@ -51,6 +51,11 @@ export interface MessageEventRecord {
   voiceSeconds: number;
 }
 
+export interface VoiceTranscriptionRecord {
+  transcript: string;
+  replySent: boolean;
+}
+
 export interface MessageStatistics {
   total: number;
   incoming: number;
@@ -152,6 +157,13 @@ export class MessistantDatabase {
         message_type TEXT NOT NULL,
         voice_seconds INTEGER NOT NULL DEFAULT 0,
         observed_at INTEGER NOT NULL
+      );
+
+      CREATE TABLE IF NOT EXISTS voice_transcriptions (
+        message_id TEXT NOT NULL PRIMARY KEY,
+        transcript TEXT NOT NULL,
+        reply_sent INTEGER NOT NULL DEFAULT 0,
+        created_at INTEGER NOT NULL
       );
     `);
 
@@ -536,6 +548,41 @@ export class MessistantDatabase {
       );
 
     return Number(result.changes) > 0;
+  }
+
+  getVoiceTranscription(messageId: string): VoiceTranscriptionRecord | null {
+    const row = this.#database
+      .prepare(
+        `SELECT transcript, reply_sent
+         FROM voice_transcriptions
+         WHERE message_id = ?`,
+      )
+      .get(messageId) as
+      | { transcript: string; reply_sent: number }
+      | undefined;
+    return row
+      ? { transcript: row.transcript, replySent: row.reply_sent === 1 }
+      : null;
+  }
+
+  saveVoiceTranscription(messageId: string, transcript: string): void {
+    this.#database
+      .prepare(
+        `INSERT OR IGNORE INTO voice_transcriptions
+          (message_id, transcript, reply_sent, created_at)
+         VALUES (?, ?, 0, ?)`,
+      )
+      .run(messageId, transcript, Date.now());
+  }
+
+  markVoiceTranscriptionReplied(messageId: string): void {
+    this.#database
+      .prepare(
+        `UPDATE voice_transcriptions
+         SET reply_sent = 1
+         WHERE message_id = ?`,
+      )
+      .run(messageId);
   }
 
   getStatistics(startAt: number, endAt: number): MessageStatistics {

@@ -57,6 +57,27 @@ describe("message ledger", () => {
     expect(database.listObservedChatIds()).toEqual(["friend@c.us"]);
   });
 
+  it("caches voice transcriptions and tracks reply delivery", () => {
+    expect(database.getVoiceTranscription("voice-1")).toBeNull();
+
+    database.saveVoiceTranscription("voice-1", "Hello from the voice note.");
+    expect(database.getVoiceTranscription("voice-1")).toEqual({
+      transcript: "Hello from the voice note.",
+      replySent: false,
+    });
+
+    database.markVoiceTranscriptionReplied("voice-1");
+    expect(database.getVoiceTranscription("voice-1")).toEqual({
+      transcript: "Hello from the voice note.",
+      replySent: true,
+    });
+
+    database.saveVoiceTranscription("voice-1", "A different transcript.");
+    expect(database.getVoiceTranscription("voice-1")?.transcript).toBe(
+      "Hello from the voice note.",
+    );
+  });
+
   it("migrates the legacy nullable message ID ledger without retaining corrupt rows", () => {
     cleanup();
     const directory = mkdtempSync(path.join(tmpdir(), "messistant-legacy-"));
