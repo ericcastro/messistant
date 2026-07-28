@@ -205,6 +205,7 @@ export async function createWebServer(
         objectSrc: ["'none'"],
         scriptSrc: ["'self'"],
         styleSrc: ["'self'"],
+        upgradeInsecureRequests: null,
       },
     },
   });
