@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import Fastify, {
@@ -208,7 +209,16 @@ export async function createWebServer(
     },
   });
   await app.register(fastifyStatic, {
-    root: path.resolve(import.meta.dirname, "../../public"),
+    root: (() => {
+      const publicRoot = [
+        path.resolve(process.cwd(), "public"),
+        path.resolve(import.meta.dirname, "../../public"),
+      ].find(existsSync);
+      if (!publicRoot) {
+        throw new Error("Could not locate the public assets directory.");
+      }
+      return publicRoot;
+    })(),
     prefix: "/assets/",
     decorateReply: false,
     maxAge: "1h",
