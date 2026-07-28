@@ -172,8 +172,9 @@ describe("message processing regressions", () => {
     expect(database.getCapability("voice-transcription")).toMatchObject({
       accessMode: "allowlist",
       settings: {
-        configurationVersion: 4,
+        configurationVersion: 5,
         prompt: expect.stringContaining("Do not translate"),
+        automaticEnabled: false,
       },
     });
     cleanup();
@@ -364,6 +365,10 @@ describe("message processing regressions", () => {
     const configuration = {
       ...voiceTranscriptionCapability.defaults,
       directChatIds: ["friend@c.us"],
+      settings: {
+        ...voiceTranscriptionCapability.defaults.settings,
+        automaticEnabled: true,
+      },
     };
 
     expect(

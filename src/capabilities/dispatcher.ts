@@ -141,8 +141,14 @@ export class CapabilityDispatcher {
     const deleted = this.database.pruneMessageEvents(
       now - retentionDays * 24 * 60 * 60 * 1000,
     );
-    if (deleted > 0) {
-      this.logger.info({ deleted, retentionDays }, "Pruned message metadata");
+    const deletedVoiceMarkers = this.database.pruneProcessedVoiceNotes(
+      now - retentionDays * 24 * 60 * 60 * 1000,
+    );
+    if (deleted > 0 || deletedVoiceMarkers > 0) {
+      this.logger.info(
+        { deleted, deletedVoiceMarkers, retentionDays },
+        "Pruned message metadata",
+      );
     }
   }
 }

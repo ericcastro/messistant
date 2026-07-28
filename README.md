@@ -87,10 +87,10 @@ Open [http://127.0.0.1:3000](http://127.0.0.1:3000).
 5. Create reusable audiences under **Access**.
 6. Assign an access policy to every assist.
 
-Automatic voice transcription starts with an empty allowlist, while self-chat
-voice notes remain automatic. In any other conversation, the owner can reply to
-a voice note with `!stt` for a one-off transcription. This does not add that
-chat to the automatic allowlist.
+Automatic voice transcription is disabled by default. When enabled, it runs
+only according to the selected policy and allowlist. In any other conversation,
+the owner can reply to a voice note with `!stt` for a one-off transcription.
+Transcript text is not retained locally.
 
 ## Production-style run
 
@@ -183,8 +183,8 @@ message, while free text tells Messistant which words to focus on.
 
 ### Transcribe a voice note
 
-Voice notes received in allowlisted chats transcribe automatically. Your own
-self-chat voice notes do too.
+Automatic voice transcription must first be enabled under Assists. It then
+runs only according to the selected policy and allowlist.
 
 For a one-off transcription anywhere else, reply to the voice note with:
 
@@ -193,7 +193,8 @@ For a one-off transcription anywhere else, reply to the voice note with:
 ```
 
 Only the linked account can use `!stt`. The command does not change the
-conversation’s automatic transcription access.
+conversation’s automatic transcription access. The default reply prefix is
+`📝 Transcript by Messistant:`.
 
 ### Private messaging statistics
 

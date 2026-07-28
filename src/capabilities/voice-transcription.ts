@@ -13,6 +13,7 @@ const defaultMaximumBytes = 20 * 1024 * 1024;
 const defaultMaximumSeconds = 10 * 60;
 const defaultTranscriptionPrompt =
   "The speaker may switch between languages, including within the same sentence. Transcribe each phrase exactly in the language spoken. Preserve code-switching and original wording. Do not translate.";
+const defaultReplyPrefix = "📝 Transcript by Messistant:";
 
 function numberSetting(
   settings: Record<string, unknown>,
@@ -191,6 +192,9 @@ export function isVoiceTranscriptionAuthorized(
   if (isSttCommand(event.body)) {
     return event.fromMe;
   }
+  if (configuration.settings.automaticEnabled !== true) {
+    return false;
+  }
   if (event.chatType === "self" && event.fromMe) {
     return true;
   }
@@ -213,13 +217,14 @@ export const voiceTranscriptionCapability: Capability = {
       maxSeconds: defaultMaximumSeconds,
       language: "",
       prompt: defaultTranscriptionPrompt,
-      replyPrefix: "📝 Transcript:",
-      configurationVersion: 4,
+      replyPrefix: defaultReplyPrefix,
+      automaticEnabled: false,
+      configurationVersion: 5,
     },
   },
 
   migrateConfiguration(configuration) {
-    if (configuration.settings.configurationVersion === 4) {
+    if (configuration.settings.configurationVersion === 5) {
       return configuration;
     }
 
@@ -238,8 +243,11 @@ export const voiceTranscriptionCapability: Capability = {
           configuration.settings.prompt.trim()
             ? configuration.settings.prompt
             : defaultTranscriptionPrompt,
-        configurationVersion: 4,
+        replyPrefix: defaultReplyPrefix,
+        automaticEnabled: false,
+        configurationVersion: 5,
       },
+      enabled: true,
     };
   },
 
@@ -270,22 +278,11 @@ export const voiceTranscriptionCapability: Capability = {
 
     const targetMessageId = transcriptionMessageId(target);
     if (targetMessageId) {
-      const cached = context.database.getVoiceTranscription(targetMessageId);
-      if (cached) {
-        if (cached.replySent) {
-          context.logger.info(
-            { messageId: event.id, targetMessageId },
-            "Skipped duplicate voice transcription reply",
-          );
-          return;
-        }
-        await event.raw.reply(`${
-          typeof context.configuration.settings.replyPrefix === "string" &&
-          context.configuration.settings.replyPrefix.trim()
-            ? context.configuration.settings.replyPrefix.trim()
-            : "📝 Transcript:"
-        }\n${cached.transcript}`);
-        context.database.markVoiceTranscriptionReplied(targetMessageId);
+      if (context.database.hasProcessedVoiceNote(targetMessageId)) {
+        context.logger.info(
+          { messageId: event.id, targetMessageId },
+          "Skipped duplicate voice transcription",
+        );
         return;
       }
     }
@@ -348,18 +345,15 @@ export const voiceTranscriptionCapability: Capability = {
       prompt,
       idempotencyKey: targetMessageId || context.requestKey,
     });
+    if (targetMessageId) {
+      context.database.markVoiceNoteProcessed(targetMessageId);
+    }
     const prefixValue = context.configuration.settings.replyPrefix;
     const prefix =
       typeof prefixValue === "string" && prefixValue.trim()
         ? prefixValue.trim()
-        : "📝 Transcript:";
+        : defaultReplyPrefix;
 
-    if (targetMessageId) {
-      context.database.saveVoiceTranscription(targetMessageId, transcript);
-    }
     await event.raw.reply(`${prefix}\n${transcript}`);
-    if (targetMessageId) {
-      context.database.markVoiceTranscriptionReplied(targetMessageId);
-    }
   },
 };

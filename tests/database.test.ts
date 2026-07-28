@@ -57,25 +57,14 @@ describe("message ledger", () => {
     expect(database.listObservedChatIds()).toEqual(["friend@c.us"]);
   });
 
-  it("caches voice transcriptions and tracks reply delivery", () => {
-    expect(database.getVoiceTranscription("voice-1")).toBeNull();
+  it("tracks processed voice notes without storing transcript text", () => {
+    expect(database.hasProcessedVoiceNote("voice-1")).toBe(false);
 
-    database.saveVoiceTranscription("voice-1", "Hello from the voice note.");
-    expect(database.getVoiceTranscription("voice-1")).toEqual({
-      transcript: "Hello from the voice note.",
-      replySent: false,
-    });
+    database.markVoiceNoteProcessed("voice-1");
+    expect(database.hasProcessedVoiceNote("voice-1")).toBe(true);
 
-    database.markVoiceTranscriptionReplied("voice-1");
-    expect(database.getVoiceTranscription("voice-1")).toEqual({
-      transcript: "Hello from the voice note.",
-      replySent: true,
-    });
-
-    database.saveVoiceTranscription("voice-1", "A different transcript.");
-    expect(database.getVoiceTranscription("voice-1")?.transcript).toBe(
-      "Hello from the voice note.",
-    );
+    expect(database.pruneProcessedVoiceNotes(Date.now() + 1)).toBe(1);
+    expect(database.hasProcessedVoiceNote("voice-1")).toBe(false);
   });
 
   it("migrates the legacy nullable message ID ledger without retaining corrupt rows", () => {

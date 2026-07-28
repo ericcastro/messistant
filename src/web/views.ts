@@ -314,10 +314,15 @@ function capabilitySettings(
   const replyPrefix =
     typeof settings.replyPrefix === "string"
       ? settings.replyPrefix
-      : "📝 Transcript:";
+      : "📝 Transcript by Messistant:";
+  const automaticEnabled = settings.automaticEnabled === true;
 
   return `
     <div class="field-grid capability-settings">
+      <label class="switch">
+        <input type="checkbox" name="automaticEnabled" value="true"${checked(automaticEnabled)}>
+        <span>Enable automatic transcription</span>
+      </label>
       <label>
         Language hint
         <input name="language" value="${escapeHtml(language)}" placeholder="auto">

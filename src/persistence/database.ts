@@ -51,11 +51,6 @@ export interface MessageEventRecord {
   voiceSeconds: number;
 }
 
-export interface VoiceTranscriptionRecord {
-  transcript: string;
-  replySent: boolean;
-}
-
 export interface MessageStatistics {
   total: number;
   incoming: number;
@@ -159,15 +154,14 @@ export class MessistantDatabase {
         observed_at INTEGER NOT NULL
       );
 
-      CREATE TABLE IF NOT EXISTS voice_transcriptions (
+      CREATE TABLE IF NOT EXISTS processed_voice_notes (
         message_id TEXT NOT NULL PRIMARY KEY,
-        transcript TEXT NOT NULL,
-        reply_sent INTEGER NOT NULL DEFAULT 0,
-        created_at INTEGER NOT NULL
+        processed_at INTEGER NOT NULL
       );
     `);
 
     this.#migrateMessageEventIds();
+    this.#database.exec("DROP TABLE IF EXISTS voice_transcriptions;");
 
     this.#database.exec(`
       CREATE INDEX IF NOT EXISTS message_events_time_idx
@@ -550,39 +544,32 @@ export class MessistantDatabase {
     return Number(result.changes) > 0;
   }
 
-  getVoiceTranscription(messageId: string): VoiceTranscriptionRecord | null {
+  hasProcessedVoiceNote(messageId: string): boolean {
     const row = this.#database
       .prepare(
-        `SELECT transcript, reply_sent
-         FROM voice_transcriptions
+        `SELECT 1
+         FROM processed_voice_notes
          WHERE message_id = ?`,
       )
-      .get(messageId) as
-      | { transcript: string; reply_sent: number }
-      | undefined;
-    return row
-      ? { transcript: row.transcript, replySent: row.reply_sent === 1 }
-      : null;
+      .get(messageId);
+    return Boolean(row);
   }
 
-  saveVoiceTranscription(messageId: string, transcript: string): void {
+  markVoiceNoteProcessed(messageId: string): void {
     this.#database
       .prepare(
-        `INSERT OR IGNORE INTO voice_transcriptions
-          (message_id, transcript, reply_sent, created_at)
-         VALUES (?, ?, 0, ?)`,
+        `INSERT OR IGNORE INTO processed_voice_notes
+          (message_id, processed_at)
+         VALUES (?, ?)`,
       )
-      .run(messageId, transcript, Date.now());
+      .run(messageId, Date.now());
   }
 
-  markVoiceTranscriptionReplied(messageId: string): void {
-    this.#database
-      .prepare(
-        `UPDATE voice_transcriptions
-         SET reply_sent = 1
-         WHERE message_id = ?`,
-      )
-      .run(messageId);
+  pruneProcessedVoiceNotes(before: number): number {
+    const result = this.#database
+      .prepare("DELETE FROM processed_voice_notes WHERE processed_at < ?")
+      .run(before);
+    return Number(result.changes);
   }
 
   getStatistics(startAt: number, endAt: number): MessageStatistics {

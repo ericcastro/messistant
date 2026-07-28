@@ -507,7 +507,10 @@ export async function createWebServer(
       capabilitySettings.language = formString(body, "language").trim();
       capabilitySettings.prompt = formString(body, "prompt").trim();
       capabilitySettings.replyPrefix =
-        formString(body, "replyPrefix").trim() || "📝 Transcript:";
+        formString(body, "replyPrefix").trim() ||
+        "📝 Transcript by Messistant:";
+      capabilitySettings.automaticEnabled =
+        formString(body, "automaticEnabled") === "true";
       capabilitySettings.maxSeconds =
         Math.max(1, Number(formString(body, "maxMinutes")) || 10) * 60;
       capabilitySettings.maxBytes =
